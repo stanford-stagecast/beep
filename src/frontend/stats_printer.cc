@@ -1,8 +1,6 @@
 #include "stats_printer.hh"
 #include "exception.hh"
 
-#include <cxxabi.h>
-
 using namespace std;
 using namespace std::chrono;
 
