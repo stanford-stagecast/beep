@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "audio_buffer.hh"
-#include "file_descriptor.hh"
+#include "beep/util/file_descriptor.hh"
 
 class PCMFD : public FileDescriptor
 {

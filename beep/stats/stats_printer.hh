@@ -5,9 +5,9 @@
 #include <sstream>
 #include <unistd.h>
 
-#include "eventloop.hh"
-#include "file_descriptor.hh"
-#include "ring_buffer.hh"
+#include "beep/util/eventloop.hh"
+#include "beep/util/file_descriptor.hh"
+#include "beep/util/ring_buffer.hh"
 
 class StatsPrinterTask
 {

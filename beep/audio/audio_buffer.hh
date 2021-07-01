@@ -1,6 +1,6 @@
 #pragma once
 
-#include "typed_ring_buffer.hh"
+#include "beep/util/typed_ring_buffer.hh"
 
 using AudioChannel = SafeEndlessBuffer<float>;
 

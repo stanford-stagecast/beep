@@ -1,4 +1,4 @@
-#include "alsa_devices.hh"
+#include "beep/audio/alsa_devices.hh"
 
 #include <cstdlib>
 #include <iostream>

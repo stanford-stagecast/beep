@@ -11,7 +11,7 @@
 #include <tuple>
 
 #include "alsa_devices.hh"
-#include "exception.hh"
+#include "beep/util/exception.hh"
 
 using namespace std;
 using namespace std::chrono;
