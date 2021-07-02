@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <iostream>
 
@@ -18,6 +20,15 @@ void program_body()
 
   TestModel model {};
   model.set_thread_pool( &eigen_dev );
+
+  array<float, 10000> input;
+  for ( size_t i = 0; i < input.size(); i++ ) {
+    input[i] = 1.0 * i / input.size();
+  }
+
+  std::copy( input.data(), input.data() + input.size(), model.arg0_data() );
+  model.Run();
+  cout << "Result: " << model.result0(0, 0, 0) << endl;
 
   AudioInterface audio_output { "default", "audio output", SND_PCM_STREAM_PLAYBACK };
   audio_output.initialize();
