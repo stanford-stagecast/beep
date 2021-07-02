@@ -1,12 +1,24 @@
-#include "beep/audio/alsa_devices.hh"
-
 #include <cstdlib>
 #include <iostream>
+
+#define EIGEN_USE_THREADS
+#define EIGEN_USE_CUSTOM_THREAD_POOL
+#include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
+
+#include "beep/audio/alsa_devices.hh"
+#include "beep/models/test_model.h"
 
 using namespace std;
 
 void program_body()
 {
+  // taking care of the model
+  Eigen::ThreadPool eigen_tp { 2 };
+  Eigen::ThreadPoolDevice eigen_dev { &eigen_tp, eigen_tp.NumThreads() };
+
+  TestModel model {};
+  model.set_thread_pool( &eigen_dev );
+
   AudioInterface audio_output { "default", "audio output", SND_PCM_STREAM_PLAYBACK };
   audio_output.initialize();
   audio_output.start();

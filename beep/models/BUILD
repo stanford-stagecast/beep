@@ -5,4 +5,5 @@ tf_library(
     config = "config.pbtxt",
     cpp_class = "TestModel",
     graph = "frozen_graph.pb",
+    visibility = ["//visibility:public"],
 )
