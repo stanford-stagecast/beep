@@ -1,0 +1,149 @@
+diff --git a/tensorflow/compiler/aot/tfcompile.bzl b/tensorflow/compiler/aot/tfcompile.bzl
+index c94d95fa3e3..8da451ba287 100644
+--- a/tensorflow/compiler/aot/tfcompile.bzl
++++ b/tensorflow/compiler/aot/tfcompile.bzl
+@@ -21,6 +21,7 @@ load(
+     "tf_copts",
+ )
+ load("//tensorflow:tensorflow.bzl", "tfcompile_target_cpu")
++load("//tensorflow:tensorflow.bzl", "clean_dep")
+ 
+ def tf_library(
+         name,
+@@ -35,7 +36,7 @@ def tf_library(
+         visibility = None,
+         testonly = None,
+         tfcompile_flags = None,
+-        tfcompile_tool = "//tensorflow/compiler/aot:tfcompile",
++        tfcompile_tool = clean_dep("//tensorflow/compiler/aot:tfcompile"),
+         include_standard_runtime_deps = True,
+         enable_xla_hlo_profiling = False,
+         enable_tracemes = False,
+@@ -159,10 +160,10 @@ def tf_library(
+             cmd = (
+                 "CUDA_VISIBLE_DEVICES='' " +
+                 "$(location " +
+-                "//tensorflow/python/tools:freeze_graph)" +
++                clean_dep("//tensorflow/python/tools:freeze_graph)") +
+                 freeze_args
+             ),
+-            tools = ["//tensorflow/python/tools:freeze_graph"],
++            tools = [clean_dep("//tensorflow/python/tools:freeze_graph")],
+             tags = tags,
+         )
+         tfcompile_graph = freeze_file
+@@ -300,23 +301,23 @@ def tf_library(
+             # These deps are required by all tf_library targets even if
+             # include_standard_runtime_deps is False.  Without them, the
+             # generated code will fail to compile.
+-            "//tensorflow/compiler/tf2xla:xla_compiled_cpu_function",
+-            "//tensorflow/core:framework_lite",
++            clean_dep("//tensorflow/compiler/tf2xla:xla_compiled_cpu_function"),
++            clean_dep("//tensorflow/core:framework_lite"),
+         ] + (need_xla_data_proto and [
+             # If we're generating the program shape, we must depend on the
+             # proto.
+-            "//tensorflow/compiler/xla:xla_data_proto_cc",
++            clean_dep("//tensorflow/compiler/xla:xla_data_proto_cc"),
+         ] or []) + (enable_xla_hlo_profiling and [
+-            "//tensorflow/compiler/xla/service:hlo_profile_printer_data_cc",
++            clean_dep("//tensorflow/compiler/xla/service:hlo_profile_printer_data_cc"),
+         ] or []) + (include_standard_runtime_deps and [
+             # TODO(cwhipkey): only depend on kernel code that the model actually
+             # needed.
+-            "//tensorflow/compiler/xla/service/cpu:runtime_conv2d",
+-            "//tensorflow/compiler/xla/service/cpu:runtime_key_value_sort",
+-            "//tensorflow/compiler/xla/service/cpu:runtime_matmul",
+-            "//tensorflow/compiler/xla/service/cpu:runtime_single_threaded_conv2d",
+-            "//tensorflow/compiler/xla/service/cpu:runtime_single_threaded_matmul",
+-            "//third_party/eigen3",
++            clean_dep("//tensorflow/compiler/xla/service/cpu:runtime_conv2d"),
++            clean_dep("//tensorflow/compiler/xla/service/cpu:runtime_key_value_sort"),
++            clean_dep("//tensorflow/compiler/xla/service/cpu:runtime_matmul"),
++            clean_dep("//tensorflow/compiler/xla/service/cpu:runtime_single_threaded_conv2d"),
++            clean_dep("//tensorflow/compiler/xla/service/cpu:runtime_single_threaded_matmul"),
++            clean_dep("//third_party/eigen3"),
+         ] or []) + (deps or []),
+         tags = tags,
+     )
+@@ -342,7 +343,7 @@ def tf_library(
+             name = ("gen_" + test_name),
+             testonly = 1,
+             srcs = [
+-                "//tensorflow/compiler/aot:test.cc",
++                clean_dep("//tensorflow/compiler/aot:test.cc"),
+                 header_file,
+             ],
+             outs = [test_file],
+@@ -364,11 +365,11 @@ def tf_library(
+             srcs = [test_file],
+             deps = [
+                 ":" + name,
+-                "//tensorflow/compiler/aot:tf_library_test_main",
+-                "//tensorflow/compiler/xla:executable_run_options",
+-                "//third_party/eigen3",
+-                "//tensorflow/core:lib",
+-                "//tensorflow/core:test",
++                clean_dep("//tensorflow/compiler/aot:tf_library_test_main"),
++                clean_dep("//tensorflow/compiler/xla:executable_run_options"),
++                clean_dep("//third_party/eigen3"),
++                clean_dep("//tensorflow/core:lib"),
++                clean_dep("//tensorflow/core:test"),
+             ],
+             tags = tags,
+         )
+@@ -376,8 +377,8 @@ def tf_library(
+     if gen_benchmark:
+         benchmark_name = name + "_benchmark"
+         benchmark_file = benchmark_name + ".cc"
+-        benchmark_main = ("//tensorflow/compiler/aot:" +
+-                          "benchmark_main.template")
++        benchmark_main = (clean_dep("//tensorflow/compiler/aot:" +
++                          "benchmark_main.template"))
+ 
+         # Rule to rewrite benchmark.cc to produce the benchmark_file.
+         native.genrule(
+@@ -410,11 +411,11 @@ def tf_library(
+             linkopts = if_android(["-pie", "-s"]),
+             deps = [
+                 ":" + name,
+-                "//tensorflow/compiler/aot:benchmark",
+-                "//tensorflow/compiler/xla:executable_run_options",
+-                "//third_party/eigen3",
++                clean_dep("//tensorflow/compiler/aot:benchmark"),
++                clean_dep("//tensorflow/compiler/xla:executable_run_options"),
++                clean_dep("//third_party/eigen3"),
+             ] + if_android([
+-                "//tensorflow/compiler/aot:benchmark_extra_android",
++                clean_dep("//tensorflow/compiler/aot:benchmark_extra_android"),
+             ]),
+             tags = tags,
+         )
+@@ -425,16 +426,16 @@ def target_llvm_triple():
+     # TODO(toddw): Add target_triple for other targets.  For details see:
+     # http://llvm.org/docs/doxygen/html/Triple_8h_source.html
+     return select({
+-        "//tensorflow:android_armeabi": "armv5-none-android",
+-        "//tensorflow:android_arm": "armv7-none-android",
+-        "//tensorflow:android_arm64": "aarch64-none-android",
+-        "//tensorflow:android_x86": "i686-none-android",
+-        "//tensorflow:ios": "arm64-none-ios",
+-        "//tensorflow:ios_x86_64": "x86_64-apple-ios",
+-        "//tensorflow:linux_ppc64le": "ppc64le-ibm-linux-gnu",
+-        "//tensorflow:macos_x86_64": "x86_64-none-darwin",
+-        "//tensorflow:macos_arm64": "aarch64-none-darwin",
+-        "//tensorflow:windows": "x86_64-none-windows",
+-        "//tensorflow:linux_s390x": "systemz-none-linux-gnu",
++        clean_dep("//tensorflow:android_armeabi"): "armv5-none-android",
++        clean_dep("//tensorflow:android_arm"): "armv7-none-android",
++        clean_dep("//tensorflow:android_arm64"): "aarch64-none-android",
++        clean_dep("//tensorflow:android_x86"): "i686-none-android",
++        clean_dep("//tensorflow:ios"): "arm64-none-ios",
++        clean_dep("//tensorflow:ios_x86_64"): "x86_64-apple-ios",
++        clean_dep("//tensorflow:linux_ppc64le"): "ppc64le-ibm-linux-gnu",
++        clean_dep("//tensorflow:macos_x86_64"): "x86_64-none-darwin",
++        clean_dep("//tensorflow:macos_arm64"): "aarch64-none-darwin",
++        clean_dep("//tensorflow:windows"): "x86_64-none-windows",
++        clean_dep("//tensorflow:linux_s390x"): "systemz-none-linux-gnu",
+         "//conditions:default": "x86_64-pc-linux",
+     })
