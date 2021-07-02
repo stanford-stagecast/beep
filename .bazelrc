@@ -1,9 +1,17 @@
+build:release --copt=-mavx
+build:release --copt=-msse4.2
+
 build:nativeopt --copt=-march=native
 build:nativeopt --host_copt=-march=native
 build:nativeopt --copt=-O3
 
+build -c opt
+
 build --cxxopt=-std=c++17
 build --host_cxxopt=-std=c++17
 build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0
+
+build --action_env=CC=gcc-9
+build --action_env=CXX=g++-9
 
 build --experimental_repo_remote_exec

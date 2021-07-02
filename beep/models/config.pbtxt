@@ -1,0 +1,36 @@
+feed {
+  id {
+    node_name: "serving_default_input_1"
+  }
+  shape {
+    dim {
+      size: 1
+    }
+    dim {
+      size: 10000
+    }
+    dim {
+      size: 1
+    }
+  }
+  name: "feed_input_1"
+  type: DT_FLOAT
+}
+fetch {
+  id {
+    node_name: "StatefulPartitionedCall"
+  }
+  name: "fetch_lambda"
+  shape {
+    dim {
+      size: 1
+    }
+    dim {
+      size: 1
+    }
+    dim {
+      size: 120
+    }
+  }
+  type: DT_FLOAT
+}
