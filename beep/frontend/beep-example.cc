@@ -13,50 +13,73 @@
 
 using namespace std;
 
-void program_body()
+class Beep
 {
-  // taking care of the model
-  Eigen::ThreadPool eigen_tp { 2 };
-  Eigen::ThreadPoolDevice eigen_dev { &eigen_tp, eigen_tp.NumThreads() };
+public:
+  Beep( const std::string& input );
+  void play();
 
-  TestModel model {};
-  model.set_thread_pool( &eigen_dev );
+private:
+  WavReader wav_reader_;
 
-  array<float, 10000> input;
-  for ( size_t i = 0; i < input.size(); i++ ) {
-    input[i] = 1.0 * i / input.size();
-  }
+  // audio interface
+  AudioInterface audio_output_ { "default", "audio output", SND_PCM_STREAM_PLAYBACK };
+  ChannelPair audio_buffer_ { 32768 };
+  size_t write_cursor_ { 0 };
 
-  std::copy( input.data(), input.data() + input.size(), model.arg0_data() );
-  model.Run();
-  cout << "Result: " << model.result0( 0, 0, 0 ) << endl;
+  // neural net
+  Eigen::ThreadPool eigen_tp_ { 2 };
+  Eigen::ThreadPoolDevice eigen_dev_ { &eigen_tp_, eigen_tp_.NumThreads() };
+  TestModel model_ {};
+};
 
-  WavReader wav_reader { "/home/sadjad/temp/beep/drums.wav" };
+Beep::Beep( const string& input )
+  : wav_reader_( input )
+{
+  audio_output_.initialize();
+  audio_output_.start();
+}
 
-  AudioInterface audio_output { "default", "audio output", SND_PCM_STREAM_PLAYBACK };
-  audio_output.initialize();
-  audio_output.start();
+void Beep::play()
+{
+  bool eof = false;
 
-  ChannelPair fakeaudio { 32768 };
-  size_t write_cursor = 0;
+  while ( not eof ) {
+    while ( write_cursor_ < audio_buffer_.range_end() ) {
+      const auto read_count = wav_reader_.read( audio_buffer_.ch1() );
 
-  while ( true ) {
-    while ( write_cursor < fakeaudio.range_end() ) {
-      fakeaudio.ch1().at( write_cursor ) = sin( 440.0 * 2 * M_PI * write_cursor / 48000.0 );
-      fakeaudio.ch2().at( write_cursor ) = sin( 660.0 * 2 * M_PI * write_cursor / 48000.0 );
-      write_cursor++;
+      if ( read_count == 0 ) {
+        eof = true;
+      }
+
+      write_cursor_ += read_count;
     }
 
-    audio_output.play( fakeaudio, write_cursor );
-
-    fakeaudio.pop_before( audio_output.cursor() );
+    audio_output_.play( audio_buffer_, write_cursor_ );
+    audio_buffer_.pop_before( audio_output_.cursor() );
   }
 }
 
-int main()
+void usage( char* argv0 )
+{
+  cerr << "usage: " << argv0 << " WAVFILE" << endl;
+}
+
+int main( int argc, char* argv[] )
 {
   try {
-    program_body();
+    if ( argc <= 0 ) {
+      abort();
+    }
+
+    if ( argc != 2 ) {
+      usage( argv[0] );
+      return EXIT_FAILURE;
+    }
+
+    Beep beep { argv[1] };
+    beep.play();
+
     return EXIT_SUCCESS;
   } catch ( const exception& e ) {
     cerr << e.what() << "\n";

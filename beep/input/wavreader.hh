@@ -2,6 +2,8 @@
 
 #include <sndfile.hh>
 
+#include "beep/util/typed_ring_buffer.hh"
+
 class WavReader
 {
 private:
@@ -13,4 +15,6 @@ public:
   size_t sample_rate() const { return handle_.samplerate(); }
   size_t channels() const { return handle_.channels(); }
   size_t frame_count() const { return handle_.frames(); }
+
+  size_t read( SafeEndlessBuffer<float>& buffer );
 };
