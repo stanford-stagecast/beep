@@ -50,6 +50,7 @@ void Beep::play()
 
       if ( read_count == 0 ) {
         eof = true;
+        break;
       }
 
       write_cursor_ += read_count;
