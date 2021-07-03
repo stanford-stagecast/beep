@@ -8,6 +8,7 @@
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 
 #include "beep/audio/alsa_devices.hh"
+#include "beep/input/wavreader.hh"
 #include "beep/models/test_model.h"
 
 using namespace std;
@@ -28,7 +29,9 @@ void program_body()
 
   std::copy( input.data(), input.data() + input.size(), model.arg0_data() );
   model.Run();
-  cout << "Result: " << model.result0(0, 0, 0) << endl;
+  cout << "Result: " << model.result0( 0, 0, 0 ) << endl;
+
+  WavReader wav_reader { "/home/sadjad/temp/beep/drums.wav" };
 
   AudioInterface audio_output { "default", "audio output", SND_PCM_STREAM_PLAYBACK };
   audio_output.initialize();

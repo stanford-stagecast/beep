@@ -5,6 +5,7 @@ cc_binary(
         "//beep/audio",
         "//beep/models:test_model",
         "//beep/stats",
+        "//beep/input",
         "//beep/util",
         "@alsa//:lib",
         "@org_tensorflow//third_party/eigen3",
