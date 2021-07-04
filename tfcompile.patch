@@ -1,7 +1,7 @@
-diff --git a/tensorflow/compiler/aot/tfcompile.bzl b/tensorflow/compiler/aot/tfcompile.bzl
+diff --git a/third_party/tensorflow/tensorflow/compiler/aot/tfcompile.bzl b/third_party/tensorflow/tensorflow/compiler/aot/tfcompile.bzl
 index c94d95fa3e3..8da451ba287 100644
---- a/tensorflow/compiler/aot/tfcompile.bzl
-+++ b/tensorflow/compiler/aot/tfcompile.bzl
+--- a/third_party/tensorflow/tensorflow/compiler/aot/tfcompile.bzl
++++ b/third_party/tensorflow/tensorflow/compiler/aot/tfcompile.bzl
 @@ -21,6 +21,7 @@ load(
      "tf_copts",
  )
