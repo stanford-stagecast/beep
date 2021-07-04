@@ -7,7 +7,7 @@ feed {
       size: 1
     }
     dim {
-      size: 10000
+      size: 2048
     }
     dim {
       size: 1
