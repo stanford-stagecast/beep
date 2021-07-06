@@ -10,6 +10,7 @@
 #include "beep/audio/alsa_devices.hh"
 #include "beep/input/wavreader.hh"
 #include "beep/models/test_model.h"
+#include "beep/util/timer.hh"
 
 using namespace std;
 
@@ -20,6 +21,8 @@ public:
   void play();
 
 private:
+  void infer( span_view<float> input, span<float> output );
+
   WavReader wav_reader_;
 
   // audio interface
@@ -36,6 +39,7 @@ private:
 Beep::Beep( const string& input )
   : wav_reader_( input )
 {
+  model_.set_thread_pool( &eigen_dev_ );
   audio_output_.initialize();
   audio_output_.start();
 }
@@ -61,6 +65,26 @@ void Beep::play()
   }
 }
 
+void Beep::infer( span_view<float> input, span<float> output )
+{
+  GlobalScopeTimer<Timer::Category::Inference> _;
+
+  if ( model_.arg0_count() < 0 || input.size() != static_cast<size_t>( model_.arg0_count() ) ) {
+    throw runtime_error( "Beep::infer: expected an input of size "s + to_string( model_.arg0_count() ) + ", got "s
+                         + to_string( input.size() ) + " instead"s );
+  }
+
+  if ( model_.result0_count() < 0 || output.size() != static_cast<size_t>( model_.result0_count() ) ) {
+    throw runtime_error( "Beep::infer: expected an output of size "s + to_string( model_.result0_count() )
+                         + ", got "s + to_string( output.size() ) + " instead"s );
+  }
+
+  model_.set_arg0_data( input.begin() );
+  model_.Run();
+
+  copy( model_.result0_data(), model_.result0_data() + model_.result0_count(), output.begin() );
+}
+
 void usage( char* argv0 )
 {
   cerr << "usage: " << argv0 << " WAVFILE" << endl;
@@ -80,6 +104,8 @@ int main( int argc, char* argv[] )
 
     Beep beep { argv[1] };
     beep.play();
+
+    global_timer().summary( cout );
 
     return EXIT_SUCCESS;
   } catch ( const exception& e ) {
