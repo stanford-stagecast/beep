@@ -2,6 +2,7 @@
 #include <array>
 #include <cstdlib>
 #include <iostream>
+#include <thread>
 
 #define EIGEN_USE_THREADS
 #define EIGEN_USE_CUSTOM_THREAD_POOL
@@ -31,7 +32,8 @@ private:
   size_t write_cursor_ { 0 };
 
   // neural net
-  Eigen::ThreadPool eigen_tp_ { 2 };
+  Eigen::ThreadPool eigen_tp_ { static_cast<int>(
+    thread::hardware_concurrency() > 0 ? thread::hardware_concurrency() : 1 ) };
   Eigen::ThreadPoolDevice eigen_dev_ { &eigen_tp_, eigen_tp_.NumThreads() };
   TestModel model_ {};
 };
