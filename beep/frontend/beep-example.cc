@@ -74,17 +74,20 @@ void Beep::predict()
   // can't do much about the first interval, since no real audio is available
   fill_n( predicted_audio_.data(), interval, 0 );
 
-  auto last_status_print = chrono::steady_clock::now();
-
-  for ( size_t abs_time = 0; abs_time < last_interval_start; abs_time += interval ) {
-
+  auto print_status = [&]( const auto abs_time ) {
+    static auto last_status_print = chrono::steady_clock::now();
     const auto now = chrono::steady_clock::now();
+
     if ( now - last_status_print >= chrono::seconds { 1 } ) {
       last_status_print = now;
       cout << "Inference: " << setprecision( 1 ) << fixed
            << ( abs_time / interval / ( 1.0 * last_interval_start / interval ) * 100 )
            << "% (abs time = " << abs_time << ")" << endl;
     }
+  };
+
+  for ( size_t abs_time = 0; abs_time < last_interval_start; abs_time += interval ) {
+    print_status( abs_time );
 
     // the goal is to predict `interval` samples of true audio for relative
     // time t=[interval, interval + interval)
