@@ -14,8 +14,7 @@ WavReader::WavReader( const string& path )
   }
 }
 
-size_t WavReader::read( SafeEndlessBuffer<float>& buffer )
+size_t WavReader::read( span<float> out_buffer )
 {
-  auto writing_region = buffer.region( buffer.range_begin(), buffer.range_end() - buffer.range_begin() );
-  return handle_.read( writing_region.begin(), writing_region.size() );
+  return handle_.read( out_buffer.begin(), out_buffer.size() );
 }

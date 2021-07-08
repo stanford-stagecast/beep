@@ -2,7 +2,7 @@
 
 #include <sndfile.hh>
 
-#include "beep/util/typed_ring_buffer.hh"
+#include "beep/util/spans.hh"
 
 class WavReader
 {
@@ -16,5 +16,5 @@ public:
   size_t channels() const { return handle_.channels(); }
   size_t frame_count() const { return handle_.frames(); }
 
-  size_t read( SafeEndlessBuffer<float>& buffer );
+  size_t read( span<float> out_buffer );
 };
