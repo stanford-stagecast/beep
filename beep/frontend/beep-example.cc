@@ -5,14 +5,12 @@
 #include <iostream>
 #include <thread>
 
-#define EIGEN_USE_THREADS
-#define EIGEN_USE_CUSTOM_THREAD_POOL
-#include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
-
 #include "beep/audio/alsa_devices.hh"
 #include "beep/input/wavreader.hh"
-#include "beep/models/test_model.h"
 #include "beep/util/timer.hh"
+
+#include "beep/models/ptmodel.hh"
+#include "beep/models/tfmodel.hh"
 
 using namespace std;
 
@@ -39,29 +37,19 @@ private:
   vector<float> true_audio_;
   vector<float> predicted_audio_;
 
-  // neural net
-  Eigen::ThreadPool eigen_tp_ { static_cast<int>(
-    thread::hardware_concurrency() > 0 ? thread::hardware_concurrency() : 1 ) };
-  Eigen::ThreadPoolDevice eigen_dev_ { &eigen_tp_, eigen_tp_.NumThreads() };
-  TestModel model_ {};
-
-  struct
-  {
-    unique_ptr<float[]> arg0_buffer;
-  } model_buffers_ { make_unique<float[]>( model_.arg0_count() ) };
+  unique_ptr<Model> model_;
 };
 
 Beep::Beep( const string& input )
   : sample_count_( WavReader { input }.frame_count() )
   , true_audio_( sample_count_ )
   , predicted_audio_( sample_count_, 0.f )
+  , model_( make_unique<TensorFlowModel>() )
 {
   WavReader wav_reader { input };
   if ( wav_reader.read( { true_audio_.data(), true_audio_.size() } ) != sample_count_ ) {
     throw runtime_error( "not all the samples were read" );
   }
-
-  model_.set_thread_pool( &eigen_dev_ );
 }
 
 void Beep::predict()
@@ -111,7 +99,7 @@ void Beep::predict()
       continue;
     }
 
-    infer( input_true_audio, input_pred_audio, input_true_audio_end, output_pred_audio );
+    model_->infer( input_true_audio, input_pred_audio, input_true_audio_end, output_pred_audio );
   }
 }
 
@@ -134,29 +122,6 @@ void Beep::play()
     audio_output.play( playback_buffer, write_cursor );
     playback_buffer.pop_before( audio_output.cursor() );
   }
-}
-
-void Beep::infer( span_view<float> true_audio,
-                  [[maybe_unused]] span_view<float> pred_audio,
-                  [[maybe_unused]] const size_t true_audio_last_timestamp,
-                  span<float> output )
-{
-  GlobalScopeTimer<Timer::Category::Inference> _;
-
-  if ( model_.result0_count() < 0 || output.size() != static_cast<size_t>( model_.result0_count() ) ) {
-    throw runtime_error( "Beep::infer: expected an output of size "s + to_string( model_.result0_count() )
-                         + ", got "s + to_string( output.size() ) + " instead"s );
-  }
-
-  fill_n( model_buffers_.arg0_buffer.get(), model_.arg0_count(), 0.f );
-  copy( max( true_audio.begin(), true_audio.end() - model_.arg0_count() ),
-        true_audio.end(),
-        model_buffers_.arg0_buffer.get() );
-
-  model_.set_arg0_data( model_buffers_.arg0_buffer.get() );
-  model_.Run();
-
-  copy( model_.result0_data(), model_.result0_data() + model_.result0_count(), output.begin() );
 }
 
 void usage( char* argv0 )

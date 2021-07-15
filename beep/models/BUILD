@@ -7,3 +7,15 @@ tf_library(
     graph = "frozen_graph.pb",
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "models",
+    srcs = glob(["*.cc"]),
+    hdrs = glob(["*.hh"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        ":test_model",
+        "//beep/util:util",
+        "@libtorch_archive//:torch"
+    ],
+)
