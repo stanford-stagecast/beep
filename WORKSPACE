@@ -45,3 +45,11 @@ workspace()
 load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
 
 workspace()
+
+http_archive(
+    name = "libtorch_archive",
+    strip_prefix = "libtorch",
+    type = "zip",
+    urls = ["https://download.pytorch.org/libtorch/nightly/cpu/libtorch-shared-with-deps-latest.zip"],
+    build_file = "@//:libtorch.BUILD"
+)
