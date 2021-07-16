@@ -5,12 +5,17 @@
 
 #include "model.hh"
 
-class PyTorchTestModel : public Model
+class PyTorchModel : public Model
 {
 public:
-  PyTorchTestModel( const std::string& path )
+  PyTorchModel( const std::string& path )
     : module_( path )
   {}
+
+  void infer( span_view<float> true_audio,
+                      span_view<float> pred_audio,
+                      const size_t true_audio_last_timestamp,
+                      span<float> output ) override;
 
 private:
   torch::jit::script::Module module_;
