@@ -22,7 +22,7 @@ constexpr size_t operator"" _samples( unsigned long long int n )
 class Beep
 {
 public:
-  Beep( const std::string& input );
+  Beep( const std::string& input, const string& model_type, const string& model_path = {} );
   void predict();
   void play();
 
@@ -40,12 +40,19 @@ private:
   unique_ptr<Model> model_;
 };
 
-Beep::Beep( const string& input )
+Beep::Beep( const string& input, const string& model_type, const string& model_path )
   : sample_count_( WavReader { input }.frame_count() )
   , true_audio_( sample_count_ )
   , predicted_audio_( sample_count_, 0.f )
-  , model_( make_unique<TensorFlowModel>() )
 {
+  if ( model_type == "torch" ) {
+    model_ = make_unique<PyTorchModel>( model_path );
+  } else if ( model_type == "tensorflow" ) {
+    model_ = make_unique<TensorFlowModel>();
+  } else {
+    throw runtime_error( "unknown model type: " + model_type );
+  }
+
   WavReader wav_reader { input };
   if ( wav_reader.read( { true_audio_.data(), true_audio_.size() } ) != sample_count_ ) {
     throw runtime_error( "not all the samples were read" );
@@ -126,7 +133,7 @@ void Beep::play()
 
 void usage( char* argv0 )
 {
-  cerr << "usage: " << argv0 << " WAVFILE" << endl;
+  cerr << "usage: " << argv0 << " WAVFILE MODEL_TYPE=<torch|tensorflow> [MODEL_PATH]" << endl;
 }
 
 int main( int argc, char* argv[] )
@@ -136,12 +143,16 @@ int main( int argc, char* argv[] )
       abort();
     }
 
-    if ( argc != 2 ) {
+    if ( argc < 3 ) {
       usage( argv[0] );
       return EXIT_FAILURE;
     }
 
-    Beep beep { argv[1] };
+    string wav_path { argv[1] };
+    string model_type { argv[2] };
+    string model_path { argc > 3 ? argv[3] : "" };
+
+    Beep beep { wav_path, model_type, model_path };
     beep.predict();
     beep.play();
 

@@ -50,7 +50,7 @@ http_archive(
     name = "libtorch_archive",
     strip_prefix = "libtorch",
     type = "zip",
-    urls = ["https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.9.0%2Bcpu.zip"],
-    sha256 = "6b99edc046f37ad37a3b04dc86663895f10c362af09fdd10884f30360d0ba023",
+    urls = ["https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-1.9.0%2Bcpu.zip"],
+    sha256 = "65192e6e1c3046265dc100003d494c415342c284800cc58db4933e370d98a0db",
     build_file = "@//:libtorch.BUILD"
 )
