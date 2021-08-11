@@ -3,6 +3,8 @@
 #include <torch/script.h>
 #include <torch/serialize.h>
 #include <torch/torch.h>
+#include <random>
+
 
 using namespace std;
 
@@ -62,6 +64,28 @@ Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> torch_to_eigen_1d( const at
     continue;                                                                                                      \
   }
 
+#define RELU( x )                                                                                               \
+  x.array().cwiseMax(0.).matrix();
+
+#define SIGMOID( x )                                                                                               \
+  (1. / (1. + (-x.array()).exp())).matrix();
+
+#define TANH( x )                                                                                               \
+  x.array().tanh().matrix();
+
+// void SOFTMAX(const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>& input, Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>& output) {
+//   // using arrays allows to call native vectorizable exp and log
+//   Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic> wMinusMax = input.rowwise() - input.colwise().maxCoeff();
+//   output = (wMinusMax.rowwise() - wMinusMax.exp().colwise().sum().log()).exp();
+//   //output = input;
+// }
+
+void combine_signal(const uint8_t* coarse, const uint8_t* fine, span<float> out) {
+  for(int i = 0; i < 120; i++) {
+    out[i] = (float)(coarse[i] * 256 + fine[i] - 1 << 15);
+  }
+}
+
 PyTorchModel::PyTorchModel( const string& path )
   : model_( torch::jit::load( path ) )
 {
@@ -104,4 +128,101 @@ void PyTorchModel::infer( span_view<float> true_audio,
 
   // auto o = module_.forward( inputs ).toTensor();
   // cout << o.size( 0 ) << endl;
+  int hidden_size = 200;
+  int split_size = hidden_size/2;
+  EigenMatrix<float> b_coarse_u = bias_u.block(0,0,split_size,1);
+  EigenMatrix<float> b_fine_u = bias_u.block(split_size,0,split_size,1);
+  EigenMatrix<float> b_coarse_r = bias_r.block(0,0,split_size,1);
+  EigenMatrix<float> b_fine_r = bias_r.block(split_size,0,split_size,1);
+  EigenMatrix<float> b_coarse_e = bias_e.block(0,0,split_size,1);
+  EigenMatrix<float> b_fine_e = bias_e.block(split_size,0,split_size,1);
+
+  EigenMatrix<float> hidden = EigenMatrix<float>::Zero(hidden_size, 1);
+
+  EigenMatrix<float> /*out_coarse_f, out_fine_f, */prev_output, fine_input;
+  EigenMatrix<float> coarse_input_proj, fine_input_proj;
+  EigenMatrix<float> I_coarse_u, I_coarse_r, I_coarse_e, I_fine_u, I_fine_r, I_fine_e;
+  EigenMatrix<float> R_coarse_u, R_coarse_r, R_coarse_e, R_fine_u, R_fine_r, R_fine_e;
+
+  EigenMatrix<float> R_u_out, R_r_out, R_e_out;
+  EigenMatrix<float> u, r, e, hidden_coarse, hidden_fine;
+
+  uint8_t out_coarse = 0;
+  uint8_t out_fine = 0;
+  uint8_t coarse_outputs[120];
+  uint8_t fine_outputs[120];
+  float out_coarse_f, out_fine_f;
+  std::random_device rd;
+  std::mt19937 rng(rd());
+
+  for (int i = 0; i < 120; i++) {
+    // Split into two hidden states
+    EigenMatrix<float> hidden_coarse = hidden.block(0,0,split_size,1);
+    EigenMatrix<float> hidden_fine = hidden.block(split_size,0,split_size,1);
+
+    // Scale and concat previous predictions
+    out_coarse_f = /* EigenMatrix<float> */((float)out_coarse / 127.5 - 1);
+    out_fine_f = /*EigenMatrix<float>*/((float)out_fine / 127.5 - 1);
+    prev_output << out_coarse_f, out_fine_f;
+
+    // Project input 
+    coarse_input_proj = prev_output * I_coarse.weight.transpose();
+    I_coarse_u = coarse_input_proj.block(0,0,split_size,1);
+    I_coarse_r = coarse_input_proj.block(split_size,0,split_size,1);
+    I_coarse_e = coarse_input_proj.block(2*split_size,0,split_size,1);
+
+    R_u_out = hidden * R_u.weight.transpose();
+    R_r_out = hidden * R_r.weight.transpose();
+    R_e_out = hidden * R_e.weight.transpose();
+
+    R_coarse_u = R_u_out.block(0,0,split_size,1);
+    R_coarse_r = R_r_out.block(0,0,split_size,1);
+    R_coarse_e = R_e_out.block(0,0,split_size,1);
+
+    R_fine_u = R_u_out.block(split_size,0,split_size,1);
+    R_fine_r = R_r_out.block(split_size,0,split_size,1);
+    R_fine_e = R_e_out.block(split_size,0,split_size,1);
+
+    // Compute the coarse gates
+    // u = SIGMOID(R_coarse_u + I_coarse_u + b_coarse_u);
+    //r = SIGMOID(R_coarse_r + I_coarse_r + b_coarse_r);
+    //e = TANH(r * R_coarse_e + I_coarse_e + b_coarse_e);
+    //hidden_coarse = u * hidden_coarse + (1. - u) * e;
+
+    // // Compute the coarse output
+    // out_coarse = RELU(hidden_coarse * O1.weight.transpose() + O1.bias); // * O2.weight.transpose() + O2.bias;
+    // SOFTMAX(out_coarse, posterior);
+    
+    // std::discrete_distribution<int> dist1(posterior.begin(), posterior.end());
+    // out_coarse = dist1(rng);
+
+    // // Project the [prev outputs and predicted coarse sample]
+    // coarse_pred = EigenMatrix<float>(out_coarse)/ 127.5 - 1;
+    // fine_input << prev_outputs, coarse_pred;
+    // fine_input_proj = fine_input * I_fine.weight.transpose();
+
+    // I_fine_u = fine_input_proj.block(0,0,split_size,1);
+    // I_fine_r = fine_input_proj.block(split_size,0,split_size,1);
+    // I_fine_e = fine_input_proj.block(2*split_size,0,split_size,1);
+
+    // // Compute the fine gates
+    // u = SIGMOID(R_fine_u + I_fine_u + b_fine_u);
+    // r = SIGMOID(R_fine_r + I_fine_r + b_fine_r);
+    // e = TANH(r * R_fine_e + I_fine_e + b_fine_e);
+    // hidden_fine = u * hidden_fine + (1. - u) * e;
+
+    // // Compute the fine output
+    // out_fine = RELU(hidden_fine * O1.weight.transpose() + O1.bias); // * O2.weight.transpose() + O2.bias;
+    // SOFTMAX(out_fine, posterior);
+
+    // std::discrete_distribution<int> dist2(posterior.begin(), posterior.end());
+    // out_fine = dist2(rng);
+
+    // coarse_outputs[i] = out_coarse;
+    // fine_outputs[i] = out_fine;
+
+    // hidden << hidden_coarse, hidden_fine;
+
+  }
+  combine_signal(coarse_outputs, fine_outputs, output);
 }
